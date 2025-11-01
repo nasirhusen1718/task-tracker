@@ -1,122 +1,98 @@
 #include <iostream>
-#include <vector>
+#include <stack>
+#include <queue>
 #include <string>
 using namespace std;
 
 struct Task {
     int id;
-    string title;
-    string description;
-    string dueDate;
-    bool completed;
+    string title, desc, due;
+    bool done;
+    Task* next;
 };
 
-vector<Task> tasks;
-int taskCount = 0;
+Task* head = nullptr;
+stack<Task> undoStack;
+queue<Task*> pending;
+int countID = 0;
 
-// Function to add a task
+Task* findTask(int id) {
+    for (Task* t = head; t; t = t->next)
+        if (t->id == id) return t;
+    return nullptr;
+}
+
 void addTask() {
-    Task t;
-    t.id = ++taskCount;
-    cout << "Enter Title: ";
+    Task* t = new Task();
+    t->id = ++countID;
     cin.ignore();
-    getline(cin, t.title);
-    cout << "Enter Description: ";
-    getline(cin, t.description);
-    cout << "Enter Due Date (YYYY-MM-DD): ";
-    getline(cin, t.dueDate);
-    t.completed = false;
-    tasks.push_back(t);
-    cout << "Task added successfully!\n";
+    cout << "Title: "; getline(cin, t->title);
+    cout << "Description: "; getline(cin, t->desc);
+    cout << "Due Date: "; getline(cin, t->due);
+    t->done = false; t->next = head; head = t;
+    pending.push(t);
+    cout << "✅ Task Added!\n";
 }
 
-// Function to view tasks
 void viewTasks() {
-    if (tasks.empty()) {
-        cout << "No tasks available.\n";
-        return;
-    }
-    cout << "\nID | Title | Description | Due Date | Completed\n";
-    cout << "-----------------------------------------------\n";
-    for (auto t : tasks) {
-        cout << t.id << " | " << t.title << " | " << t.description 
-             << " | " << t.dueDate << " | " << (t.completed ? "Yes" : "No") << endl;
-    }
+    if (!head) return void(cout << "No tasks.\n");
+    cout << "\nID | Title | Description | Due | Done\n";
+    for (Task* t = head; t; t = t->next)
+        cout << t->id << " | " << t->title << " | " << t->desc
+             << " | " << t->due << " | " << (t->done ? "Yes" : "No") << '\n';
 }
 
-// Function to edit a task
 void editTask() {
-    int id;
-    cout << "Enter Task ID to edit: ";
-    cin >> id;
-    for (auto &t : tasks) {
-        if (t.id == id) {
-            cin.ignore();
-            cout << "Enter new Title: ";
-            getline(cin, t.title);
-            cout << "Enter new Description: ";
-            getline(cin, t.description);
-            cout << "Enter new Due Date: ";
-            getline(cin, t.dueDate);
-            cout << "Task updated successfully!\n";
-            return;
-        }
-    }
-    cout << "Task ID not found!\n";
+    int id; cout << "Enter ID: "; cin >> id;
+    Task* t = findTask(id);
+    if (!t) return void(cout << "Not found.\n");
+    cin.ignore();
+    cout << "New Title: "; getline(cin, t->title);
+    cout << "New Desc: "; getline(cin, t->desc);
+    cout << "New Due: "; getline(cin, t->due);
+    cout << "✏️ Task Updated!\n";
 }
 
-// Function to delete a task
 void deleteTask() {
-    int id;
-    cout << "Enter Task ID to delete: ";
-    cin >> id;
-    for (size_t i = 0; i < tasks.size(); i++) {
-        if (tasks[i].id == id) {
-            tasks.erase(tasks.begin() + i);
-            cout << "Task deleted successfully!\n";
-            return;
-        }
-    }
-    cout << "Task ID not found!\n";
+    int id; cout << "Enter ID: "; cin >> id;
+    Task *t = head, *p = nullptr;
+    while (t && t->id != id) { p = t; t = t->next; }
+    if (!t) return void(cout << "Not found.\n");
+    undoStack.push(*t);
+    if (p) p->next = t->next; else head = t->next;
+    delete t; cout << "🗑️ Task Deleted!\n";
 }
 
-// Function to mark a task as completed
-void markCompleted() {
-    int id;
-    cout << "Enter Task ID to mark completed: ";
-    cin >> id;
-    for (auto &t : tasks) {
-        if (t.id == id) {
-            t.completed = true;
-            cout << "Task marked as completed!\n";
-            return;
-        }
-    }
-    cout << "Task ID not found!\n";
+void undoDelete() {
+    if (undoStack.empty()) return void(cout << "Nothing to undo.\n");
+    Task t = undoStack.top(); undoStack.pop();
+    Task* n = new Task(t);
+    n->next = head; head = n;
+    cout << "🔁 Undo Successful!\n";
 }
 
-// Main menu
-void menu() {
-    int choice;
+void markDone() {
+    int id; cout << "Enter ID: "; cin >> id;
+    Task* t = findTask(id);
+    if (!t || t->done) return void(cout << "Invalid.\n");
+    t->done = true; cout << "✔️ Task Completed!\n";
+}
+
+int main() {
+    int c;
     do {
-        cout << "\n--- Task Manager ---\n";
-        cout << "1. Add Task\n2. View Tasks\n3. Edit Task\n4. Delete Task\n5. Mark Task Completed\n6. Exit\n";
-        cout << "Enter choice: ";
-        cin >> choice;
-
-        switch(choice) {
+        cout << "\n1.Add  2.View  3.Edit  4.Delete  5.Undo  6.MarkDone  7.Exit\nChoice: ";
+        cin >> c;
+        switch (c) {
             case 1: addTask(); break;
             case 2: viewTasks(); break;
             case 3: editTask(); break;
             case 4: deleteTask(); break;
-            case 5: markCompleted(); break;
-            case 6: cout << "Exiting...\n"; break;
-            default: cout << "Invalid choice!\n";
+            case 5: undoDelete(); break;
+            case 6: markDone(); break;
+            case 7: cout << "Bye!\n"; break;
+            default: cout << "Invalid!\n";
         }
-    } while(choice != 6);
+    } while (c != 7);
 }
-
-int main() {
-    menu();
-    return 0;
-}
+s
